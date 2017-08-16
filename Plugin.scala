@@ -13,8 +13,15 @@ object FortifyPlugin extends AutoPlugin {
     }
     val scanCommand = Command.command("scan") { (state: State) =>
       val fpr = "scan.fpr"
-      Seq("bash","-c", s"rm -rf ${fpr}").!
-      Seq("bash","-c", s"sourceanalyzer -filter filter.txt -f ${fpr} -scan target/*.nst").!
+      IO.delete(new java.io.File(fpr))
+      val targetDir = {
+        val extracted: Extracted = Project.extract(state)
+        import extracted._
+        val thisScope = Load.projectScope(currentRef)
+        (target in thisScope get extracted.structure.data).get
+      }
+      val nstFiles = (targetDir ** "*.nst").get.map(_.toString)
+      (Seq("sourceanalyzer", "-filter", "filter.txt", "-f", fpr, "-scan") ++ nstFiles).!
       state
     }
   }
