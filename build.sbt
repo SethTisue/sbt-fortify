@@ -1,6 +1,8 @@
 name := "sbt-fortify"
 sbtPlugin := true
 scalaVersion := "2.10.6"
+scalacOptions ++= Seq(
+  "-deprecation", "-feature", "-unchecked", "-Xfatal-warnings")
 
 organization := "com.lightbend"
 licenses := Seq("Apache-2.0" -> url("https://www.apache.org/licenses/LICENSE-2.0.html"))
