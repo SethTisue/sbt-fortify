@@ -41,12 +41,15 @@ object FortifyPlugin extends AutoPlugin {
       "lightbend-commercial-releases",
       new URL("http://repo.lightbend.com/commercial-releases/"))(
       Resolver.ivyStylePatterns),
-    autoCompilerPlugins := true,
-    addCompilerPlugin(
-      "com.lightbend" %% "scala-fortify" % "e940f40a" classifier "assembly"
-        exclude("com.typesafe.conductr", "ent-suite-licenses-parser")
-        exclude("default", "scala-st-nodes")),
-    scalacOptions += s"-P:fortify:out=${target.value}"
+    scalacOptions in FortifyConfig += s"-Xplugin-require:fortify",
+    scalacOptions in FortifyConfig += s"-P:fortify:out=${target.value}",
+    scalacOptions in FortifyConfig += "-Ystop-before:jvm",
+    libraryDependencies in FortifyConfig +=
+      compilerPlugin(
+        "com.lightbend" %% "scala-fortify" % "e940f40a" % FortifyConfig.name
+          classifier "assembly"
+          exclude("com.typesafe.conductr", "ent-suite-licenses-parser")
+          exclude("default", "scala-st-nodes"))
   )
 
 }
