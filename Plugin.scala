@@ -6,9 +6,17 @@ import Keys._
 object FortifyPlugin extends AutoPlugin {
 
   object autoImport {
-    val translate: TaskKey[Unit] = taskKey("Fortify Translation")
-    val fpr = "scan.fpr"
-    val scan: TaskKey[Unit] = taskKey("Fortify Scan")
+    val translateCommand = Command.command("translate") { (state: State) =>
+      Project.runTask(clean in Compile, state)
+      Project.runTask(compile in Compile, state)
+      state
+    }
+    val scanCommand = Command.command("scan") { (state: State) =>
+      val fpr = "scan.fpr"
+      Seq("bash","-c", s"rm -rf ${fpr}").!
+      Seq("bash","-c", s"sourceanalyzer -filter filter.txt -f ${fpr} -scan target/*.nst").!
+      state
+    }
   }
 
   override def requires = sbt.plugins.JvmPlugin
@@ -17,6 +25,7 @@ object FortifyPlugin extends AutoPlugin {
   import autoImport._
 
   override lazy val projectSettings = Seq(
+    commands ++= Seq(translateCommand, scanCommand),
     credentials += Credentials(Path.userHome / ".lightbend" / "commercial.credentials"),
     resolvers += Resolver.url(
       "lightbend-commercial-releases",
@@ -27,15 +36,7 @@ object FortifyPlugin extends AutoPlugin {
       "com.lightbend" %% "scala-fortify" % "e940f40a" classifier "assembly"
         exclude("com.typesafe.conductr", "ent-suite-licenses-parser")
         exclude("default", "scala-st-nodes")),
-    scalacOptions += s"-P:fortify:out=${target.value}",
-    translate := Def.sequential(
-      clean in Compile,
-      compile in Compile
-    ).value,
-    scan := {
-      Seq("bash","-c", s"rm -rf ${fpr}").!
-      Seq("bash","-c", s"sourceanalyzer -filter filter.txt -f ${fpr} -scan target/*.nst").!
-    }
+    scalacOptions += s"-P:fortify:out=${target.value}"
   )
 
 }
