@@ -15,6 +15,6 @@ description := "An sbt plugin to invoke HPE Fortify SCA"
 
 publishMavenStyle := false
 publishArtifact in Test := false
-bintrayOrganization := None
-bintrayRepository := "sbt-plugins"
+bintrayOrganization := Some("sbt")
+bintrayRepository := "sbt-plugin-releases"
 bintrayReleaseOnPublish := false
