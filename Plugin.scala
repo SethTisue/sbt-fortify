@@ -5,10 +5,14 @@ import Keys._
 
 object FortifyPlugin extends AutoPlugin {
 
+  override def requires = sbt.plugins.JvmPlugin
+  override def trigger = allRequirements
+
   object autoImport {
+    val FortifyConfig = config("fortify").extend(Compile)
     val translateCommand = Command.command("translate") { (state: State) =>
       Project.runTask(clean in Compile, state)
-      Project.runTask(compile in Compile, state)
+      Project.runTask(compile in FortifyConfig, state)
       state
     }
     val scanCommand = Command.command("scan") { (state: State) =>
@@ -26,10 +30,9 @@ object FortifyPlugin extends AutoPlugin {
     }
   }
 
-  override def requires = sbt.plugins.JvmPlugin
-  override def trigger = allRequirements
-
   import autoImport._
+
+  override val projectConfigurations = Seq(FortifyConfig)
 
   override lazy val projectSettings = Seq(
     commands ++= Seq(translateCommand, scanCommand),
