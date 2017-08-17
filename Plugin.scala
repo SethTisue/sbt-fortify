@@ -12,13 +12,14 @@ object FortifyPlugin extends AutoPlugin {
 
   object autoImport {
     val translateCommand = Command.command("translate") {state =>
-      // Project.runTask(clean in Compile, state)
-      val binaryVersion = {
+      def settingValue[T](key: SettingKey[T]): T = {
         val extracted: Extracted = Project.extract(state)
         import extracted._
         val thisScope = Load.projectScope(currentRef)
-        (scalaBinaryVersion in thisScope get extracted.structure.data).get
+          (key in thisScope get extracted.structure.data).get
       }
+      val binaryVersion = settingValue(scalaBinaryVersion)
+      val targetDir = settingValue(target)
       val compilerPluginJar = for {
         (newState, result) <- Project.runTask(fullClasspath in Compile, state)
         cp <- result.toEither.right.toOption
@@ -28,23 +29,17 @@ object FortifyPlugin extends AutoPlugin {
             mId.organization == "com.lightbend" &&
               mId.name == s"scala-fortify_$binaryVersion"})
       } yield jar.data.absolutePath
-      println(compilerPluginJar.get)
-      val targetDir = {
-        val extracted: Extracted = Project.extract(state)
-        import extracted._
-        val thisScope = Load.projectScope(currentRef)
-        (target in thisScope get extracted.structure.data).get
-      }
-      println(targetDir)
+      Project.runTask(clean in Compile, state)
       Project.runTask(scalacOptions, state) match {
         case Some((newState, result)) =>
           result.toEither.right.foreach { defaultScalacOptions =>
             Project.runTask(compile in Compile,
               Project.extract(state).append(
-                scalacOptions :=
-                  defaultScalacOptions ++
-                  compilerPluginJar.map(p => Seq(s"-Xplugin:$p")).getOrElse(Seq.empty) ++
-                  Seq("-Ystop-before:jvm", "-Xplugin-require:fortify", s"-P:fortify:out=$targetDir"),
+                scalacOptions := defaultScalacOptions ++ Seq[String](
+                  s"-Xplugin:${compilerPluginJar.get}",
+                  "-Ystop-before:jvm",
+                  "-Xplugin-require:fortify",
+                  s"-P:fortify:out=$targetDir"),
                 newState))}
         case None =>
           sys.error("Couldn't get default scalacOptions")
@@ -76,10 +71,11 @@ object FortifyPlugin extends AutoPlugin {
       "lightbend-commercial-releases",
       new URL("http://repo.lightbend.com/commercial-releases/"))(
       Resolver.ivyStylePatterns),
-    addCompilerPlugin(
+    // can we somehow keep this off the compilation classpath?
+    libraryDependencies +=
       "com.lightbend" %% "scala-fortify" % "e940f40a" classifier "assembly"
         exclude("com.typesafe.conductr", "ent-suite-licenses-parser")
-        exclude("default", "scala-st-nodes"))
+        exclude("default", "scala-st-nodes")
   )
 
 }
